@@ -55,8 +55,14 @@ class AnalysisController extends Controller
                 'model' => env('OPENAI_MODEL', 'gpt-5-mini'),
                 'store' => $store,
                 'input' => [
-                    ['role' => 'system', 'content' => 'Você é um consultor técnico de créditos de carbono. Responda em português e apenas com JSON válido conforme o schema e os valores em reais Considere o valor do crédito fixado em R$25.00'],
-                    ['role' => 'user',   'content' => $promptUsuario],
+                    [
+                        'role' => 'system',
+                        'content' =>
+                        'Você é um consultor técnico de créditos de carbono. ' .
+                            'Responda em português e apenas com JSON válido conforme o schema. ' .
+                            'Os valores monetários devem estar em reais (R$) e o preço do crédito fixo em R$25,00.'
+                    ],
+                    ['role' => 'user', 'content' => $promptUsuario],
                 ],
                 'text' => [
                     'format' => [
@@ -98,14 +104,23 @@ class AnalysisController extends Controller
                                     'type' => 'object',
                                     'additionalProperties' => false,
                                     'properties' => [
-                                        'preco_credito' => ['type' => 'number'],
-                                        'valor_anual'   => ['type' => 'string']
+                                        'preco_credito'   => ['type' => 'number'],
+                                        'cultivo_anual'   => ['type' => 'string'],   // ex: "R$250–R$1.000/ano"
+                                        'evitado_one_time' => ['type' => 'string'],   // ex: "R$11.250–R$37.500"
+                                        'observacao'      => ['type' => 'string']    // ex: "Evitado é estoque preservado (não recorrente)."
                                     ],
-                                    'required' => ['preco_credito', 'valor_anual']
+                                    // ✅ inclui todas as chaves de properties
+                                    'required' => ['preco_credito', 'cultivo_anual', 'evitado_one_time', 'observacao']
                                 ],
                                 'observacoes' => ['type' => 'string']
                             ],
-                            'required' => ['area_cultivo', 'area_desmatamento_evitado', 'potencial_geracao', 'valor_estimado', 'observacoes']
+                            'required' => [
+                                'area_cultivo',
+                                'area_desmatamento_evitado',
+                                'potencial_geracao',
+                                'valor_estimado',
+                                'observacoes'
+                            ]
                         ]
                     ]
                 ]
@@ -127,7 +142,6 @@ class AnalysisController extends Controller
 
             $json = $resp->json();
 
-            // tenta extrair objeto estruturado
             $structured = null;
             $output = data_get($json, 'output', []);
             foreach ($output as $block) {
